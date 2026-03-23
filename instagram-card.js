@@ -8,23 +8,23 @@ import { I18NMixin } from "@haxtheweb/i18n-manager/lib/I18NMixin.js";
 
 /**
  * `instagram-card`
- * 
+ *
  * @demo index.html
  * @element instagram-card
  */
 export class InstagramCard extends DDDSuper(I18NMixin(LitElement)) {
-
   static get tag() {
     return "instagram-card";
   }
 
   constructor() {
     super();
-    this.title = "";
+    this.username = "";
+    this.image = "";
     this.t = this.t || {};
     this.t = {
       ...this.t,
-      title: "Title",
+      title: "Username",
     };
     this.registerLocalization({
       context: this,
@@ -34,46 +34,72 @@ export class InstagramCard extends DDDSuper(I18NMixin(LitElement)) {
     });
   }
 
-  // Lit reactive properties
   static get properties() {
     return {
       ...super.properties,
-      title: { type: String },
+      username: { type: String },
+      image: { type: String },
     };
   }
 
-  // Lit scoped styles
   static get styles() {
-    return [super.styles,
-    css`
-      :host {
-        display: block;
-        color: var(--ddd-theme-primary);
-        background-color: var(--ddd-theme-accent);
-        font-family: var(--ddd-font-navigation);
-      }
-      .wrapper {
-        margin: var(--ddd-spacing-2);
-        padding: var(--ddd-spacing-4);
-      }
-      h3 span {
-        font-size: var(--instagram-card-label-font-size, var(--ddd-font-size-s));
-      }
-    `];
+    return [
+      super.styles,
+      css`
+        :host {
+          display: block;
+          color: var(--ddd-theme-primary);
+          font-family: var(--ddd-font-navigation);
+        }
+
+        .wrapper {
+          margin: var(--ddd-spacing-2);
+          padding: var(--ddd-spacing-3);
+          width: 320px;
+          max-width: 100%;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          background: white;
+        }
+
+        h3 {
+          margin: 0 0 var(--ddd-spacing-2) 0;
+          font-size: var(--ddd-font-size-s);
+        }
+
+        h3 span {
+          font-size: var(
+            --instagram-card-label-font-size,
+            var(--ddd-font-size-s)
+          );
+          font-weight: bold;
+        }
+
+        img {
+          width: 100%;
+          aspect-ratio: 4 / 5;
+          object-fit: cover;
+          border-radius: 10px;
+          display: block;
+        }
+      `,
+    ];
   }
 
-  // Lit render the HTML
   render() {
     return html`
-<div class="wrapper">
-  <h3><span>${this.t.title}:</span> ${this.title}</h3>
-  <slot></slot>
-</div>`;
+      <div class="wrapper">
+        <h3><span>${this.t.title}:</span> ${this.username}</h3>
+
+        ${this.image
+          ? html`<img src="${this.image}" alt="Fox" />`
+          : html`<p>Loading...</p>`}
+
+        <slot></slot>
+      </div>
+    `;
   }
 
-  /**
-   * haxProperties integration via file reference
-   */
   static get haxProperties() {
     return new URL(`./lib/${this.tag}.haxProperties.json`, import.meta.url)
       .href;
