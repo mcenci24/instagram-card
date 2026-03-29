@@ -2,34 +2,22 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Instagram Card </title>
-
-    <script type="module" src="./instagram-card.js"></script>
-
+    <script type="module" src="./src/photo-gallery.js"></script>
     <style>
-      body {
-        margin: 0;
-        padding: 40px;
-        background: #f0f2f5;
-        font-family: Arial, sans-serif;
-        display: flex;
-        justify-content: center;
-      }
-
-      instagram-card {
-        display: block;
-        width: 320px;
-      }
-    </style>
+        body {
+    margin: 0;
+    background: #ffffff;
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+</style>
   </head>
-
-  <body>
-    <instagram-card
-      username="random_fox"
-      image="https://randomfox.ca/images/1.jpg"
-    >
-      <p>This is a sample caption just like an Instagram post.</p>
-    </instagram-card>
-  </body>
+    <body>
+  <photo-gallery></photo-gallery>
+</body>
 </html>
