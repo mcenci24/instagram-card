@@ -11,63 +11,47 @@ export class PhotoGallery extends DDDSuper(I18NMixin(LitElement)) {
   static get properties() {
     return {
       ...super.properties,
-      items: { type: Array },
+      post: { type: Object },
       activeIndex: { type: Number },
+      liked: { type: Boolean },
       loading: { type: Boolean },
-      reactions: { type: Object },
-      copied: { type: Boolean },
-      routeMode: { type: String },
+      error: { type: String },
     };
   }
 
   constructor() {
     super();
-    this.items = [];
+    this.post = null;
     this.activeIndex = 0;
+    this.liked = false;
     this.loading = true;
-    this.reactions = {};
-    this.copied = false;
-    this.routeMode = "home";
-
-    this.t = {
-      previous: "Previous",
-      next: "Next",
-      loading: "Loading...",
-      copied: "Link copied",
-      back: "Back to gallery",
-    };
-
+    this.error = "";
     this._onPopState = this._onPopState.bind(this);
   }
 
   static get styles() {
     return css`
+      :host {
+        display: block;
+        width: min(100%, 760px);
+      }
+
       .wrap {
-        max-width: 600px;
-        margin: 0 auto;
+        width: 100%;
         padding: 20px;
-        display: grid;
-        gap: 12px;
-      }
-
-      .controls {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      button {
-        padding: 8px 12px;
-        border-radius: 999px;
-        border: 1px solid #ccc;
-        background: white;
-        cursor: pointer;
+        box-sizing: border-box;
       }
 
       .status {
         text-align: center;
-        font-size: 0.9rem;
-        color: green;
+        font-size: 1rem;
+        color: var(--ddd-theme-default-slateGray);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .status {
+          color: var(--ddd-theme-default-limestoneLight);
+        }
       }
     `;
   }
@@ -83,133 +67,114 @@ export class PhotoGallery extends DDDSuper(I18NMixin(LitElement)) {
   }
 
   async firstUpdated() {
-    this._loadReactions();
     this._loadRoute();
-    await this._fetchGallery();
+    await this._fetchPost();
   }
 
-  updated(changed) {
-    if (changed.has("activeIndex") || changed.has("routeMode")) {
-      this._syncUrl();
-    }
-  }
-
-  async _fetchGallery() {
+  async _fetchPost() {
     try {
-      const res = await fetch("/api/photos");
-      const data = await res.json();
-      this.items = data.items || [];
-    } catch (e) {
-      console.error(e);
+      const response = await fetch("/api/photos");
+      if (!response.ok) {
+        throw new Error("Failed to load photo data");
+      }
+
+      const data = await response.json();
+      this.post = data.post;
+      this._normalizeActiveIndex();
+      this._loadReaction();
+    } catch (error) {
+      this.error = error.message || "Something went wrong";
     } finally {
       this.loading = false;
     }
   }
 
   _loadRoute() {
-    const match = window.location.pathname.match(/\/post\/(\d+)/);
-    if (match) {
-      this.routeMode = "post";
-      this.activeIndex = Number(match[1]) || 0;
-    } else {
-      this.routeMode = "home";
+    const params = new URLSearchParams(window.location.search);
+    const index = Number(params.get("activeIndex"));
+    this.activeIndex = Number.isInteger(index) && index >= 0 ? index : 0;
+  }
+
+  _normalizeActiveIndex() {
+    const total = this.post?.images?.length || 0;
+    if (!total) {
+      this.activeIndex = 0;
+      return;
+    }
+    if (this.activeIndex >= total) {
+      this.activeIndex = 0;
     }
   }
 
-  _onPopState() {
-    this._loadRoute();
-  }
-
-  _syncUrl() {
+  _syncRoute() {
     const url = new URL(window.location.href);
-
-    if (this.routeMode === "post") {
-      url.pathname = `/post/${this.activeIndex}`;
-      url.search = "";
-    } else {
-      url.pathname = "/";
-    }
-
+    url.searchParams.set("activeIndex", this.activeIndex);
     window.history.replaceState({}, "", url);
   }
 
-  _goHome() {
-    this.routeMode = "home";
+  _reactionKey() {
+    return `photo-reaction-${this.activeIndex}`;
   }
 
-  _next() {
-    this.activeIndex = (this.activeIndex + 1) % this.items.length;
+  _loadReaction() {
+    const saved = localStorage.getItem(this._reactionKey());
+    this.liked = saved === "like";
   }
 
-  _previous() {
-    this.activeIndex =
-      (this.activeIndex - 1 + this.items.length) % this.items.length;
+  _saveReaction(value) {
+    if (value) {
+      localStorage.setItem(this._reactionKey(), value);
+    } else {
+      localStorage.removeItem(this._reactionKey());
+    }
+    this._loadReaction();
   }
 
-  _loadReactions() {
-    this.reactions = JSON.parse(localStorage.getItem("reactions") || "{}");
-  }
-
-  _saveReactions() {
-    localStorage.setItem("reactions", JSON.stringify(this.reactions));
+  _changeSlide(event) {
+    this.activeIndex = event.detail.index;
+    this._syncRoute();
+    this._loadReaction();
   }
 
   _toggleLike() {
-    const id = this.currentItem.id;
-    this.reactions[id] = this.reactions[id] === "like" ? null : "like";
-    this._saveReactions();
+    const nextValue = this.liked ? null : "like";
+    this._saveReaction(nextValue);
   }
 
-  _toggleDislike() {
-    const id = this.currentItem.id;
-    this.reactions[id] =
-      this.reactions[id] === "dislike" ? null : "dislike";
-    this._saveReactions();
-  }
 
-  async _shareCurrent() {
-    const url = window.location.href;
-    await navigator.clipboard.writeText(url);
-    this.copied = true;
-    setTimeout(() => (this.copied = false), 1500);
-  }
-
-  get currentItem() {
-    return this.items[this.activeIndex];
+  _onPopState() {
+    this._loadRoute();
+    this._normalizeActiveIndex();
+    this._loadReaction();
   }
 
   render() {
-    if (this.loading) return html`<div class="wrap">${this.t.loading}</div>`;
+    if (this.loading) {
+      return html`<div class="wrap"><div class="status">Loading...</div></div>`;
+    }
 
-    const item = this.currentItem;
-    if (!item) return html`<div class="wrap">No data</div>`;
+    if (this.error || !this.post) {
+      return html`
+        <div class="wrap">
+          <div class="status">${this.error || "Unable to load post"}</div>
+        </div>
+      `;
+    }
 
     return html`
       <div class="wrap">
-        <div class="controls">
-          <button @click=${this._previous}>${this.t.previous}</button>
-          <div>${this.activeIndex + 1} / ${this.items.length}</div>
-          <button @click=${this._next}>${this.t.next}</button>
-        </div>
-
-        ${this.routeMode === "post"
-          ? html`<button @click=${this._goHome}>${this.t.back}</button>`
-          : ""}
-
         <instagram-card
-          .description=${item.description}
-          .dateTaken=${item.dateTaken}
-          .image=${item.images.full}
-          .authorName=${item.author.name}
-          .authorAvatar=${item.author.avatar}
-          .authorSince=${item.author.userSince}
-          .channelName=${item.author.channelName}
-          @like-toggle=${this._toggleLike}
-          @dislike-toggle=${this._toggleDislike}
-          @share-photo=${this._shareCurrent}
+          .displayName=${this.post.author.name}
+          .username=${"@" + this.post.author.channelName}
+          .profilePic=${this.post.author.image}
+          .userSince=${this.post.author.userSince}
+          .description=${this.post.description}
+          .images=${this.post.images}
+          .activeIndex=${this.activeIndex}
+          .liked=${this.liked}
+          @change-slide=${this._changeSlide}
+          @toggle-like=${this._toggleLike}
         ></instagram-card>
-
-        <div class="status">${this.copied ? this.t.copied : ""}</div>
       </div>
     `;
   }

@@ -3,21 +3,29 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Instagram Card </title>
+    <title>Instagram Card</title>
     <script type="module" src="./src/photo-gallery.js"></script>
     <style>
+      body {
+        margin: 0;
+        background: var(--ddd-theme-default-white);
+        color: var(--ddd-theme-default-coalyGray);
+        font-family: Arial, sans-serif;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      @media (prefers-color-scheme: dark) {
         body {
-    margin: 0;
-    background: #ffffff;
-    font-family: Arial, sans-serif;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-</style>
+          background: var(--ddd-theme-default-coalyGray);
+          color: var(--ddd-theme-default-white);
+        }
+      }
+    </style>
   </head>
-    <body>
-  <photo-gallery></photo-gallery>
-</body>
+  <body>
+    <photo-gallery></photo-gallery>
+  </body>
 </html>

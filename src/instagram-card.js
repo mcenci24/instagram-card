@@ -1,10 +1,7 @@
-/**
- * Copyright 2026 mcenci24
- * @license Apache-2.0
- */
 import { LitElement, html, css } from "lit";
 import { DDDSuper } from "@haxtheweb/d-d-d/d-d-d.js";
 import { I18NMixin } from "@haxtheweb/i18n-manager/lib/I18NMixin.js";
+import "./instagram-arrow.js";
 
 export class InstagramCard extends DDDSuper(I18NMixin(LitElement)) {
   static get tag() {
@@ -14,258 +11,420 @@ export class InstagramCard extends DDDSuper(I18NMixin(LitElement)) {
   static get properties() {
     return {
       ...super.properties,
+      displayName: { type: String },
+      username: { type: String },
+      profilePic: { type: String },
+      userSince: { type: String },
       description: { type: String },
-      dateTaken: { type: String, attribute: "date-taken" },
-      image: { type: String },
-      authorName: { type: String, attribute: "author-name" },
-      authorAvatar: { type: String, attribute: "author-avatar" },
-      authorSince: { type: String, attribute: "author-since" },
-      channelName: { type: String, attribute: "channel-name" },
-      liked: { type: Boolean, reflect: true },
-      disliked: { type: Boolean, reflect: true },
+      images: { type: Array },
+      activeIndex: { type: Number },
+      liked: { type: Boolean },
     };
   }
 
   constructor() {
     super();
-    this.title = "";
+    this.displayName = "";
+    this.username = "";
+    this.profilePic = "";
+    this.userSince = "";
     this.description = "";
-    this.dateTaken = "";
-    this.image = "";
-    this.authorName = "";
-    this.authorAvatar = "";
-    this.authorSince = "";
-    this.channelName = "";
+    this.images = [];
+    this.activeIndex = 0;
     this.liked = false;
-    this.disliked = false;
-
-    this.t = {
-      ...this.t,
-      like: "Like",
-      dislike: "Dislike",
-      share: "Share",
-      userSince: "User since",
-      taken: "Taken",
-      imageAlt: "Gallery image",
-    };
   }
 
   static get styles() {
-    return [
-      super.styles,
-      css`
-        :host {
-          display: block;
-          color: var(--ddd-theme-default-text, #111827);
-          font-family: var(--ddd-font-navigation, Arial, sans-serif);
-        }
+    return css`
+      :host {
+        display: block;
+        width: 100%;
+      }
 
+      .outer-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        width: 100%;
+      }
+
+      .card {
+        width: min(100%, 640px);
+        border: 1px solid var(--ddd-theme-default-limestoneGray);
+        border-radius: 16px;
+        overflow: hidden;
+        background: var(--ddd-theme-default-white);
+        color: var(--ddd-theme-default-coalyGray);
+        box-shadow: 0 8px 24px
+          color-mix(in srgb, var(--ddd-theme-default-coalyGray) 8%, transparent);
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--ddd-theme-default-limestoneGray);
+      }
+
+      .profile-pic {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid var(--ddd-theme-default-limestoneGray);
+        background: var(--ddd-theme-default-limestoneLight);
+        flex-shrink: 0;
+      }
+
+      .user-meta {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.2;
+      }
+
+      .display-name {
+        font-size: 0.98rem;
+        font-weight: 700;
+      }
+
+      .username,
+      .since {
+        font-size: 0.8rem;
+        color: var(--ddd-theme-default-slateGray);
+      }
+
+      .image-region {
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr) 56px;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+      }
+
+      .image-wrap {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        background: var(--ddd-theme-default-limestoneLight);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      .post-image {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .content {
+        padding: 0 16px 16px;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin: 4px 0 14px;
+      }
+
+      .action-btn {
+        border: 1px solid var(--ddd-theme-default-limestoneGray);
+        background: var(--ddd-theme-default-white);
+        color: var(--ddd-theme-default-coalyGray);
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: 0.2s ease;
+      }
+
+      .action-btn:hover {
+        transform: translateY(-1px);
+        background: var(--ddd-theme-default-limestoneLight);
+      }
+
+      .action-btn.active-like {
+        border-color: var(--ddd-theme-primary);
+        color: var(--ddd-theme-primary);
+        font-weight: 700;
+      }
+
+      .description {
+        margin: 0 0 8px 0;
+        font-size: 0.96rem;
+        line-height: 1.45;
+      }
+
+      .slide-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        font-size: 0.82rem;
+        color: var(--ddd-theme-default-slateGray);
+        margin-bottom: 12px;
+      }
+
+      .thumb-strip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .thumb-btn {
+        border: 2px solid transparent;
+        padding: 0;
+        background: none;
+        cursor: pointer;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .thumb-btn.active {
+        border-color: var(--ddd-theme-primary);
+      }
+
+      .thumb {
+        display: block;
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        background: var(--ddd-theme-default-limestoneLight);
+      }
+
+      @media (prefers-color-scheme: dark) {
         .card {
-          background: var(--ddd-theme-default-white, #ffffff);
-          border: 1px solid var(--ddd-theme-default-limestoneLight, #d1d5db);
-          border-radius: var(--ddd-radius-lg, 20px);
-          overflow: hidden;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-          max-width: 480px;
+          background: var(--ddd-theme-default-coalyGray);
+          color: var(--ddd-theme-default-white);
+          border-color: var(--ddd-theme-default-slateGray);
         }
 
         .header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 14px;
+          border-bottom-color: var(--ddd-theme-default-slateGray);
         }
 
-        .avatar {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
-          object-fit: cover;
-          flex-shrink: 0;
-          background: #e5e7eb;
+        .username,
+        .since,
+        .slide-meta {
+          color: var(--ddd-theme-default-limestoneLight);
         }
 
-        .author-block {
-          min-width: 0;
+        .image-wrap {
+          background: var(--ddd-theme-default-slateGray);
         }
 
-        .author-name {
-          font-weight: 700;
-          font-size: 1rem;
-          line-height: 1.2;
+        .action-btn {
+          background: var(--ddd-theme-default-slateGray);
+          color: var(--ddd-theme-default-white);
+          border-color: var(--ddd-theme-default-slateGray);
         }
 
-        .channel,
-        .meta {
-          font-size: 0.88rem;
-          color: #4b5563;
-          line-height: 1.3;
+        .action-btn:hover {
+          background: var(--ddd-theme-default-slateMaxLight);
         }
 
-        .media-wrap {
-          background: #f3f4f6;
+        
+      }
+
+      @media (max-width: 700px) {
+        .outer-wrap {
+          gap: 8px;
         }
 
-        .media {
-          width: 100%;
-          display: block;
-          aspect-ratio: 4 / 5;
-          object-fit: cover;
+        .image-region {
+          grid-template-columns: 40px minmax(0, 1fr) 40px;
+          gap: 8px;
+          padding: 10px;
         }
 
-        .body {
-          padding: 14px;
-          display: grid;
-          gap: 10px;
+        .content {
+          padding: 0 12px 12px;
         }
 
-        .title {
-          margin: 0;
-          font-size: 1.1rem;
-          font-weight: 700;
-          color: black;
+        .toolbar {
+          gap: 8px;
         }
 
-        .description {
-          margin: 0;
-          font-size: 0.97rem;
-          line-height: 1.55;
+        .action-btn {
+          padding: 7px 12px;
+          font-size: 0.84rem;
         }
-
-        .actions {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-
-        button {
-          border: 1px solid var(--ddd-theme-default-limestoneLight, #d1d5db);
-          background: transparent;
-          color: inherit;
-          border-radius: 999px;
-          padding: 9px 14px;
-          font: inherit;
-          cursor: pointer;
-          transition: transform 0.15s ease, border-color 0.15s ease;
-        }
-
-        button:hover,
-        button:focus-visible {
-          transform: translateY(-1px);
-          outline: none;
-          border-color: var(--ddd-theme-primary, #2563eb);
-        }
-
-        .liked {
-          background: rgba(34, 197, 94, 0.12);
-          border-color: rgba(34, 197, 94, 0.5);
-        }
-
-        .disliked {
-          background: rgba(239, 68, 68, 0.12);
-          border-color: rgba(239, 68, 68, 0.5);
-        }
-
-        @media (prefers-color-scheme: dark) {
-          :host {
-            color: #f9fafb;
-          }
-
-          .card {
-            background: #111827;
-            border-color: #374151;
-          }
-
-          .channel,
-          .meta {
-            color: #cbd5e1;
-          }
-
-          .media-wrap {
-            background: #0f172a;
-          }
-
-          button {
-            border-color: #475569;
-          }
-        }
-      `,
-    ];
+      }
+    `;
   }
 
-  _fire(name) {
+  get currentImage() {
+    return this.images?.[this.activeIndex] || null;
+  }
+
+  get visibleThumbs() {
+    const total = this.images?.length || 0;
+    if (!total) return [];
+
+    let start = this.activeIndex - 1;
+    let end = this.activeIndex + 1;
+
+    if (start < 0) {
+      start = 0;
+      end = Math.min(2, total - 1);
+    }
+
+    if (end >= total) {
+      end = total - 1;
+      start = Math.max(0, total - 3);
+    }
+
+    const thumbs = [];
+    for (let i = start; i <= end; i++) {
+      thumbs.push({
+        img: this.images[i],
+        index: i,
+      });
+    }
+
+    return thumbs;
+  }
+
+  _prev() {
+    if (!this.images.length) return;
     this.dispatchEvent(
-      new CustomEvent(name, {
+      new CustomEvent("change-slide", {
         bubbles: true,
         composed: true,
-      })
+        detail: {
+          index: (this.activeIndex - 1 + this.images.length) % this.images.length,
+        },
+      }),
+    );
+  }
+
+  _next() {
+    if (!this.images.length) return;
+    this.dispatchEvent(
+      new CustomEvent("change-slide", {
+        bubbles: true,
+        composed: true,
+        detail: {
+          index: (this.activeIndex + 1) % this.images.length,
+        },
+      }),
+    );
+  }
+
+  _selectThumb(index) {
+    this.dispatchEvent(
+      new CustomEvent("change-slide", {
+        bubbles: true,
+        composed: true,
+        detail: { index },
+      }),
+    );
+  }
+
+  _toggleLike() {
+    this.dispatchEvent(
+      new CustomEvent("toggle-like", {
+        bubbles: true,
+        composed: true,
+      }),
     );
   }
 
   render() {
+    const image = this.currentImage;
+
     return html`
-      <article class="card">
-        <div class="header">
-          <img
-            class="avatar"
-            src="${this.authorAvatar}"
-            alt="${this.authorName ? `${this.authorName} avatar` : `Author avatar`}"
-            loading="lazy"
-            decoding="async"
-          />
-          <div class="author-block">
-            <div class="author-name">${this.authorName}</div>
-            <div class="channel">${this.channelName}</div>
-            <div class="meta">
-              ${this.t.userSince}: ${this.authorSince} · ${this.t.taken}:
-              ${this.dateTaken}
+      <div class="outer-wrap">
+        <div class="card">
+          <div class="header">
+            <img
+              class="profile-pic"
+              src="${this.profilePic}"
+              alt="${this.displayName} profile picture"
+              loading="lazy"
+            />
+            <div class="user-meta">
+              <div class="display-name">${this.displayName}</div>
+              <div class="username">${this.username}</div>
+              <div class="since">User since ${this.userSince}</div>
+            </div>
+          </div>
+
+          <div class="image-region">
+            <instagram-arrow
+              direction="left"
+              @instagram-arrow-click=${this._prev}
+            ></instagram-arrow>
+
+            <div class="image-wrap">
+              ${image
+                ? html`
+                    <img
+                      class="post-image"
+                      src="${image.full}"
+                      alt="${image.name}"
+                      loading="lazy"
+                    />
+                  `
+                : ""}
+            </div>
+
+            <instagram-arrow
+              direction="right"
+              @instagram-arrow-click=${this._next}
+            ></instagram-arrow>
+          </div>
+
+          <div class="content">
+            <div class="toolbar">
+              <button
+                class="action-btn ${this.liked ? "active-like" : ""}"
+                @click=${this._toggleLike}
+              >
+                Like
+              </button>
+
+              <button class="action-btn">
+                Share
+              </button>
+
+              
+            </div>
+
+            <p class="description">${this.description}</p>
+
+            <div class="slide-meta">
+              <span>${image?.name || ""}</span>
+              <span>${image?.dateTaken || ""}</span>
+              <span>${this.activeIndex + 1} / ${this.images.length}</span>
+            </div>
+
+            <div class="thumb-strip">
+              ${this.visibleThumbs.map(
+                ({ img, index }) => html`
+                  <button
+                    class="thumb-btn ${index === this.activeIndex ? "active" : ""}"
+                    @click=${() => this._selectThumb(index)}
+                    aria-label="Go to image ${index + 1}"
+                  >
+                    <img
+                      class="thumb"
+                      src="${img.thumbnail}"
+                      alt="${img.name}"
+                      loading="lazy"
+                    />
+                  </button>
+                `,
+              )}
             </div>
           </div>
         </div>
-
-        <div class="media-wrap">
-          <img
-            class="media"
-            src="${this.image}"
-            alt="${this.title || this.t.imageAlt}"
-            decoding="async"
-            fetchpriority="high"
-          />
-        </div>
-
-        <div class="body">
-          <p class="description">${this.description}</p>
-
-          <div class="actions">
-            <button
-              class="${this.liked ? "liked" : ""}"
-              @click="${() => this._fire("like-toggle")}"
-              aria-pressed="${this.liked ? "true" : "false"}"
-            >
-              ${this.t.like}
-            </button>
-
-            <button
-              class="${this.disliked ? "disliked" : ""}"
-              @click="${() => this._fire("dislike-toggle")}"
-              aria-pressed="${this.disliked ? "true" : "false"}"
-            >
-              ${this.t.dislike}
-            </button>
-
-            <button @click="${() => this._fire("share-photo")}">
-              ${this.t.share}
-            </button>
-          </div>
-        </div>
-      </article>
+      </div>
     `;
-  }
-
-  static get haxProperties() {
-    return new URL(`./lib/${this.tag}.haxProperties.json`, import.meta.url)
-      .href;
   }
 }
 
-globalThis.customElements.define(InstagramCard.tag, InstagramCard);
+customElements.define(InstagramCard.tag, InstagramCard);
